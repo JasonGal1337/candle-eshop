@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -12,4 +6,199 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+//// ================== MODELS ==================
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  createdAt    DateTime  @default(now())
+
+  addresses    Address[]
+  carts        Cart[]
+  orders       Order[]
+  reviews      Review[]
+}
+
+model Admin {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+model Address {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+
+  firstName  String
+  lastName   String
+  line1      String
+  line2      String?
+  city       String
+  region     String
+  zip        String
+  country    String
+  phone      String?
+
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  description String
+  imageUrl    String
+
+  products    ProductCategory[]
+}
+
+model Product {
+  id            String    @id @default(uuid())
+  title         String
+  slug          String     @unique
+  description   String
+  technicalInfo String?
+  price         Decimal    @db.Decimal(10, 2)
+  stock         Int        @default(0)
+  mainImageUrl  String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  images        ProductImage[]
+  categories    ProductCategory[]
+  reviews       Review[]
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+}
+
+model ProductImage {
+  id         String  @id @default(uuid())
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+
+  // Cloudinary (store both for convenience + flexibility)
+  publicId   String?
+  url        String
+  alt        String?
+  position   Int     @default(0)
+
+  @@index([productId])
+}
+
+model ProductCategory {
+  productId  String
+  categoryId String
+
+  product    Product  @relation(fields: [productId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@id([productId, categoryId])
+  @@index([categoryId])
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  productId  String
+  userId     String
+
+  product    Product  @relation(fields: [productId], references: [id])
+  user       User?    @relation(fields: [userId], references: [id])
+
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  @@index([productId])
+  @@index([userId])
+}
+
+model Cart {
+  id         String    @id @default(uuid())
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id])
+
+  // For guest carts you can store a session/token instead of userId
+  sessionId  String?   @unique
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  items      CartItem[]
+}
+
+model CartItem {
+  id         String   @id @default(uuid())
+  cartId     String
+  productId  String
+
+  cart       Cart     @relation(fields: [cartId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id])
+
+  quantity   Int
+  // snapshot of price at time of adding to cart (optional but handy)
+  price      Decimal  @db.Decimal(10, 2)
+
+  @@unique([cartId, productId])
+  @@index([productId])
+}
+
+model Order {
+  id            String    @id @default(uuid())
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id])
+
+  // Contact snapshot (works for guests too)
+  emailSnapshot String
+
+  // Shipping address snapshot
+  shippingFullName  String?
+  shippingPhone     String?
+  shippingLine1     String?
+  shippingLine2     String?
+  shippingCity      String?
+  shippingRegion    String?
+  shippingZip       String?
+  shippingCountry   String?
+
+  // Money fields (all DECIMAL for v1 simplicity)
+  subtotal     Decimal   @db.Decimal(10, 2) @default(0.00)
+  shipping     Decimal   @db.Decimal(10, 2) @default(0.00)
+  discount     Decimal   @db.Decimal(10, 2) @default(0.00)
+  tax          Decimal   @db.Decimal(10, 2) @default(0.00)
+  total        Decimal   @db.Decimal(10, 2)
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  items        OrderItem[]
+
+  @@index([userId])
+}
+
+model OrderItem {
+  id          String   @id @default(uuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id])
+
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+
+  // Snapshots to preserve history even if product changes later
+  nameSnapshot String
+  skuSnapshot  String?
+  unitPrice    Decimal  @db.Decimal(10, 2)
+  quantity     Int
+
+  @@index([orderId])
+  @@index([productId])
 }
