@@ -8,8 +8,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-//// ================== MODELS ==================
-
 model User {
   id           String    @id @default(uuid())
   email        String    @unique
@@ -17,7 +15,6 @@ model User {
   firstName    String
   lastName     String
   createdAt    DateTime  @default(now())
-
   addresses    Address[]
   carts        Cart[]
   orders       Order[]
@@ -33,65 +30,59 @@ model Admin {
 }
 
 model Address {
-  id         String   @id @default(uuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
-
-  firstName  String
-  lastName   String
-  line1      String
-  line2      String?
-  city       String
-  region     String
-  zip        String
-  country    String
-  phone      String?
-
-  isDefault  Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id        String   @id @default(uuid())
+  userId    String
+  firstName String
+  lastName  String
+  line1     String
+  line2     String?
+  city      String
+  region    String
+  zip       String
+  country   String
+  phone     String?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
 }
 
 model Category {
-  id          String   @id @default(uuid())
+  id          String            @id @default(uuid())
   title       String
-  slug        String   @unique
+  slug        String            @unique
   description String
   imageUrl    String
-
   products    ProductCategory[]
 }
 
 model Product {
-  id            String    @id @default(uuid())
+  id            String            @id @default(uuid())
   title         String
-  slug          String     @unique
+  slug          String            @unique
   description   String
   technicalInfo String?
-  price         Decimal    @db.Decimal(10, 2)
-  stock         Int        @default(0)
+  price         Decimal           @db.Decimal(10, 2)
+  stock         Int               @default(0)
   mainImageUrl  String
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-
-  images        ProductImage[]
-  categories    ProductCategory[]
-  reviews       Review[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
   cartItems     CartItem[]
   orderItems    OrderItem[]
+  categories    ProductCategory[]
+  images        ProductImage[]
+  reviews       Review[]
 }
 
 model ProductImage {
-  id         String  @id @default(uuid())
-  productId  String
-  product    Product @relation(fields: [productId], references: [id])
-
-  // Cloudinary (store both for convenience + flexibility)
-  publicId   String?
-  url        String
-  alt        String?
-  position   Int     @default(0)
+  id        String  @id @default(uuid())
+  productId String
+  publicId  String?
+  url       String
+  alt       String?
+  position  Int     @default(0)
+  product   Product @relation(fields: [productId], references: [id])
 
   @@index([productId])
 }
@@ -99,105 +90,85 @@ model ProductImage {
 model ProductCategory {
   productId  String
   categoryId String
-
-  product    Product  @relation(fields: [productId], references: [id])
   category   Category @relation(fields: [categoryId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id])
 
   @@id([productId, categoryId])
   @@index([categoryId])
 }
 
 model Review {
-  id         String   @id @default(uuid())
-  productId  String
-  userId     String
-
-  product    Product  @relation(fields: [productId], references: [id])
-  user       User?    @relation(fields: [userId], references: [id])
-
-  rating     Int
-  comment    String?
-  createdAt  DateTime @default(now())
+  id        String   @id @default(uuid())
+  productId String
+  userId    String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@index([productId])
   @@index([userId])
 }
 
 model Cart {
-  id         String    @id @default(uuid())
-  userId     String?
-  user       User?     @relation(fields: [userId], references: [id])
-
-  // For guest carts you can store a session/token instead of userId
-  sessionId  String?   @unique
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-
-  items      CartItem[]
+  id        String     @id @default(uuid())
+  userId    String?
+  sessionId String?    @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User?      @relation(fields: [userId], references: [id])
+  items     CartItem[]
 }
 
 model CartItem {
-  id         String   @id @default(uuid())
-  cartId     String
-  productId  String
-
-  cart       Cart     @relation(fields: [cartId], references: [id])
-  product    Product  @relation(fields: [productId], references: [id])
-
-  quantity   Int
-  // snapshot of price at time of adding to cart (optional but handy)
-  price      Decimal  @db.Decimal(10, 2)
+  id        String  @id @default(uuid())
+  cartId    String
+  productId String
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+  cart      Cart    @relation(fields: [cartId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
 
   @@unique([cartId, productId])
   @@index([productId])
 }
 
 model Order {
-  id            String    @id @default(uuid())
-  userId        String?
-  user          User?     @relation(fields: [userId], references: [id])
-
-  // Contact snapshot (works for guests too)
-  emailSnapshot String
-
-  // Shipping address snapshot
-  shippingFullName  String?
-  shippingPhone     String?
-  shippingLine1     String?
-  shippingLine2     String?
-  shippingCity      String?
-  shippingRegion    String?
-  shippingZip       String?
-  shippingCountry   String?
-
-  // Money fields (all DECIMAL for v1 simplicity)
-  subtotal     Decimal   @db.Decimal(10, 2) @default(0.00)
-  shipping     Decimal   @db.Decimal(10, 2) @default(0.00)
-  discount     Decimal   @db.Decimal(10, 2) @default(0.00)
-  tax          Decimal   @db.Decimal(10, 2) @default(0.00)
-  total        Decimal   @db.Decimal(10, 2)
-
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  items        OrderItem[]
+  id               String      @id @default(uuid())
+  userId           String?
+  emailSnapshot    String
+  shippingFullName String?
+  shippingPhone    String?
+  shippingLine1    String?
+  shippingLine2    String?
+  shippingCity     String?
+  shippingRegion   String?
+  shippingZip      String?
+  shippingCountry  String?
+  subtotal         Decimal     @default(0.00) @db.Decimal(10, 2)
+  shipping         Decimal     @default(0.00) @db.Decimal(10, 2)
+  discount         Decimal     @default(0.00) @db.Decimal(10, 2)
+  tax              Decimal     @default(0.00) @db.Decimal(10, 2)
+  total            Decimal     @db.Decimal(10, 2)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  user             User?       @relation(fields: [userId], references: [id])
+  items            OrderItem[]
 
   @@index([userId])
 }
 
 model OrderItem {
-  id          String   @id @default(uuid())
-  orderId     String
-  order       Order    @relation(fields: [orderId], references: [id])
-
-  productId   String?
-  product     Product? @relation(fields: [productId], references: [id])
-
-  // Snapshots to preserve history even if product changes later
+  id           String   @id @default(uuid())
+  orderId      String
+  productId    String?
   nameSnapshot String
   skuSnapshot  String?
   unitPrice    Decimal  @db.Decimal(10, 2)
   quantity     Int
+  order        Order    @relation(fields: [orderId], references: [id])
+  product      Product? @relation(fields: [productId], references: [id])
 
   @@index([orderId])
   @@index([productId])
