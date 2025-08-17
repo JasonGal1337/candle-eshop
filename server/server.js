@@ -11,6 +11,7 @@ const prisma = require("./prisma/prismaClient.js");
 // Routers
 const userRouter = require("./routers/userRouter");
 const adminRouter = require("./routers/adminRouter");
+const categoryRouter = require("./routers/categoryRouter");
 const productRouter = require("./routers/productRouter");
 const productCategoryRouter = require("./routers/productCategoryRouter");
 const productImageRouter = require("./routers/productImageRouter");
@@ -38,6 +39,7 @@ app.get("/health", (req, res) => res.json({ ok: true }));
 // Mount routes 
 app.use("/user", userRouter);
 app.use("/admin", adminRouter);
+app.use("/category", categoryRouter);
 app.use("/product", productRouter);
 app.use("/productCategory", productCategoryRouter);
 app.use("/productImage", productImageRouter);
