@@ -1,11 +1,12 @@
 require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
+
 const app = express();
 
-
-
+// Prisma client for graceful shutdown
 const prisma = require("./prisma/prismaClient.js");
 
 // Routers
@@ -22,21 +23,34 @@ const orderItemRouter = require("./routers/orderItemRouter");
 const cartRouter = require("./routers/cartRouter");
 const cartItemRouter = require("./routers/cartItemRouter");
 
-// Core middleware
-app.use(helmet());
+// Custom middlewares
+const notFound = require("./middlewares/notFound");
+const errorHandler = require("./middlewares/errorHandler");
 
-app.use(express.json({ limit: "1mb" }));
-
+// -------- Core middleware --------
 app.use(
-  cors({
-    origin: process.env.CORS_ORIGIN || "*", // tighten in prod
+  helmet({
+    // If I ever serve images/files from another origin, disable CORP:
+    // crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
 
-// Health check
-app.get("/health", (req, res) => res.json({ ok: true }));
+// Parse JSON & URL-encoded bodies
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true }));
 
-// Mount routes 
+// CORS 
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || "*", // e.g., "http://localhost:5173" or "https://yourdomain.com"
+    credentials: true, // set true if you use cookies for auth
+  })
+);
+
+// -------- Health check --------
+app.get("/health", (_req, res) => res.json({ ok: true }));
+
+// -------- Routes --------
 app.use("/user", userRouter);
 app.use("/admin", adminRouter);
 app.use("/category", categoryRouter);
@@ -50,20 +64,11 @@ app.use("/orderItem", orderItemRouter);
 app.use("/cart", cartRouter);
 app.use("/cartItem", cartItemRouter);
 
-// 404
-app.use((req, res) => res.status(404).json({ error: "Not Found" }));
+// -------- 404 + Error handling --------
+app.use(notFound);         // uniform JSON 404 for unknown routes
+app.use(errorHandler);     // centralized error formatter
 
-// Centralized error handler
-app.use((err, _req, res, _next) => {
-  console.error(err);
-  const status = err.status || 500;
-  res.status(status).json({
-    error: err.name || "Error",
-    message: err.message || "Internal Server Error",
-  });
-});
-
-// Start server + graceful shutdown
+// -------- Start server + graceful shutdown --------
 const PORT = process.env.PORT || 4010;
 const server = app.listen(PORT, () => {
   console.log(`server is running on port ${PORT}`);

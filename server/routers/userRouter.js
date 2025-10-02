@@ -7,7 +7,7 @@ const {
   userVerifySchema,
   userEditInfoSchema,
   getUserInfoSchema,
-} = require("../validators/user");
+} = require("../validators/userValidator");
 
 const router = express.Router();
 
