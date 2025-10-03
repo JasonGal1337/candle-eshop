@@ -1,12 +1,18 @@
 const express = require("express");
 const ctrl = require("../controllers/categoryController");
-const router = express.Router();
+const validate = require("../validate");
+const { idParam, pagination } = require("../validators/common");
+const category = require("../validators/categoryValidator");
+const { z } = require("zod");
 
-router.get("/", ctrl.list);
-router.get("/:id", ctrl.get);
-router.get("/slug/:slug", ctrl.getBySlug);
-router.post("/", ctrl.create);
-router.put("/:id", ctrl.update);
-router.delete("/:id", ctrl.remove);
+const router = express.Router();
+const slugParam = z.object({ slug: z.string().min(1) });
+
+router.get("/", validate(pagination, "query"), ctrl.list);
+router.get("/slug/:slug", validate(slugParam, "params"), ctrl.getBySlug);
+router.get("/:id", validate(idParam, "params"), ctrl.get);
+router.post("/", validate(category.create, "body"), ctrl.create);
+router.put("/:id", validate(idParam, "params"), validate(category.update, "body"), ctrl.update);
+router.delete("/:id", validate(idParam, "params"), ctrl.remove);
 
 module.exports = router;

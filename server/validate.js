@@ -1,23 +1,19 @@
 const { ZodError } = require("zod");
 
-function validate(schema) {
-  return (req, res, next) => {
+/**
+ * validate(schema, source = "body")
+ * - schema: a Zod schema
+ * - source: "body" | "params" | "query"
+ */
+module.exports = function validate(schema, source = "body") {
+  return (req, _res, next) => {
     try {
-      req.validated = schema.parse(req.body);
+      const parsed = schema.parse(req[source]);
+      req[source] = parsed; // use sanitized data downstream
       next();
     } catch (err) {
-      if (err instanceof ZodError) {
-        return res.status(400).json({
-          error: "ValidationError",
-          issues: err.issues.map(i => ({
-            path: i.path.join("."),
-            message: i.message,
-          })),
-        });
-      }
+      if (err instanceof ZodError) err.status = 400; // errorHandler formats this
       next(err);
     }
   };
-}
-
-module.exports = { validate };
+};
