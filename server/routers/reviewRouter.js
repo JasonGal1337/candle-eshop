@@ -1,9 +1,15 @@
 const express = require("express");
 const ctrl = require("../controllers/reviewController");
-const router = express.Router();
+const validate = require("../validate");
+const review = require("../validators/reviewValidator");
+const { idParam } = require("../validators/common");
+const { z } = require("zod");
 
-router.get("/product/:productId", ctrl.listForProduct);
-router.post("/", ctrl.create);
-router.delete("/:id", ctrl.remove);
+const router = express.Router();
+const productIdParam = z.object({ productId: z.coerce.number().int().positive() });
+
+router.get("/product/:productId", validate(productIdParam, "params"), ctrl.listForProduct);
+router.post("/", validate(review.create, "body"), ctrl.create);
+router.delete("/:id", validate(idParam, "params"), ctrl.remove);
 
 module.exports = router;
