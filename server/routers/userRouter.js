@@ -1,6 +1,6 @@
 const express = require("express");
 const controller = require("../controllers/userController");
-const { validate } = require("../validate");
+const  validate  = require("../validate");
 const {
   userSignupSchema,
   userLoginSchema,

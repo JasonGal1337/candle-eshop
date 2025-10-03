@@ -1,6 +1,6 @@
 const express = require("express");
 const controller = require("../controllers/adminController");
-const { validate } = require("../validate");
+const  validate  = require("../validate");
 const { adminSignupSchema, adminLoginSchema, adminVerifySchema } = require("../validators/adminValidator");
 
 const router = express.Router();
